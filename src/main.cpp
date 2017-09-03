@@ -98,8 +98,29 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          double steer_value;
-          double throttle_value;
+
+          Eigen::VectorXd xs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ptsx.data(), ptsx.size());
+          Eigen::VectorXd ys = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ptsy.data(), ptsy.size());
+          auto coeffs = polyfit(xs, ys, 3);
+
+          // The cross track error is calculated by evaluating at polynomial at x, f(x)
+          // and subtracting y.
+          double cte = polyeval(coeffs, px) - py;
+          // Due to the sign starting at 0, the orientation error is -f'(x).
+          double epsi = psi - atan(coeffs[1] + 2*coeffs[2]*px + 3*coeffs[3]*px*px);
+          //double epsi = psi - atan(coeffs[1]);
+
+          Eigen::VectorXd state(6);
+          state << px, py, psi, v, cte, epsi;
+
+          auto vars = mpc.Solve(state, coeffs);
+
+          double steer_value    = - vars[0];
+          double throttle_value = vars[1];
+
+          std::cout << "delta = " << vars[0] << std::endl;
+          std::cout << "a = " << vars[1] << std::endl;
+          std::cout << std::endl;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -113,6 +134,18 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
+          int N = vars.size()/2 - 1;
+          for (int i = 0; i < N; i++)
+          {
+
+            double tx = vars[2 + 2*i] - px;
+            double ty = vars[2 + 2*i + 1] -py;
+
+            double x_v = tx*cos(psi) + ty*sin(psi);
+            double y_v = - tx*sin(psi) + ty*cos(psi);
+            mpc_x_vals.push_back(x_v);
+            mpc_y_vals.push_back(y_v);
+          }
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
@@ -123,6 +156,19 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          for (int i = 0; i < ptsx.size(); i++)
+          {
+            double tx = ptsx[i] - px;
+            double ty = polyeval(coeffs, ptsx[i]) - py;
+
+            double x_v = tx*cos(psi) + ty*sin(psi);
+            double y_v = - tx*sin(psi) + ty*cos(psi);
+
+            //next_x_vals.push_back(ptsx[i]);
+            //next_y_vals.push_back(polyeval(coeffs, ptsx[i]));
+            next_x_vals.push_back(x_v);
+            next_y_vals.push_back(y_v);
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
