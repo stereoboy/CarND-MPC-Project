@@ -23,7 +23,7 @@ const double Lf = 2.67;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 40 mph.
-double ref_v = 20;
+double ref_v = 30;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -276,10 +276,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
-  for (int i = 0; i < solution.x.size(); i++)
-  {
-    cout << "[" << i << "]" << solution.x[i] << endl;
-  }
   vector<double> ret;
   ret.resize(2 + 2*N);
   ret[0] = solution.x[delta_start];

@@ -99,6 +99,11 @@ int main() {
           *
           */
 
+          // calculate new start point through simulation considering latency
+          double latency = 0.1; // 100ms
+          px = px + v*cos(psi)*latency;
+          py = py + v*sin(psi)*latency;
+
 
           // Transform world coordinates to vehicle coordinates
           Eigen::VectorXd xs = Eigen::VectorXd(ptsx.size());
@@ -133,9 +138,9 @@ int main() {
           double steer_value    = - vars[0]/0.436332;
           double throttle_value = vars[1];
 
-          std::cout << "delta = " << vars[0] << std::endl;
-          std::cout << "a = " << vars[1] << std::endl;
-          std::cout << std::endl;
+          //std::cout << "delta = " << vars[0] << std::endl;
+          //std::cout << "a = " << vars[1] << std::endl;
+          //std::cout << std::endl;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
