@@ -99,8 +99,23 @@ int main() {
           *
           */
 
-          Eigen::VectorXd xs = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ptsx.data(), ptsx.size());
-          Eigen::VectorXd ys = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(ptsy.data(), ptsy.size());
+
+          // Transform world coordinates to vehicle coordinates
+          Eigen::VectorXd xs = Eigen::VectorXd(ptsx.size());
+          Eigen::VectorXd ys = Eigen::VectorXd(ptsy.size());
+          for (int i = 0; i < ptsx.size(); i++)
+          {
+            double tx = ptsx[i] - px;
+            double ty = ptsy[i] - py;
+
+            xs(i) = tx*cos(psi) + ty*sin(psi);
+            ys(i) = - tx*sin(psi) + ty*cos(psi);
+          }
+
+          px = 0;
+          py = 0;
+          psi = 0;
+
           auto coeffs = polyfit(xs, ys, 3);
 
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
@@ -115,7 +130,7 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs);
 
-          double steer_value    = - vars[0];
+          double steer_value    = - vars[0]/0.436332;
           double throttle_value = vars[1];
 
           std::cout << "delta = " << vars[0] << std::endl;
@@ -137,14 +152,8 @@ int main() {
           int N = vars.size()/2 - 1;
           for (int i = 0; i < N; i++)
           {
-
-            double tx = vars[2 + 2*i] - px;
-            double ty = vars[2 + 2*i + 1] -py;
-
-            double x_v = tx*cos(psi) + ty*sin(psi);
-            double y_v = - tx*sin(psi) + ty*cos(psi);
-            mpc_x_vals.push_back(x_v);
-            mpc_y_vals.push_back(y_v);
+            mpc_x_vals.push_back(vars[2 + 2*i]);
+            mpc_y_vals.push_back(vars[2 + 2*i + 1]);
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
@@ -158,16 +167,8 @@ int main() {
           // the points in the simulator are connected by a Yellow line
           for (int i = 0; i < ptsx.size(); i++)
           {
-            double tx = ptsx[i] - px;
-            double ty = polyeval(coeffs, ptsx[i]) - py;
-
-            double x_v = tx*cos(psi) + ty*sin(psi);
-            double y_v = - tx*sin(psi) + ty*cos(psi);
-
-            //next_x_vals.push_back(ptsx[i]);
-            //next_y_vals.push_back(polyeval(coeffs, ptsx[i]));
-            next_x_vals.push_back(x_v);
-            next_y_vals.push_back(y_v);
+            next_x_vals.push_back(xs(i));
+            next_y_vals.push_back(polyeval(coeffs, xs(i)));
           }
 
           msgJson["next_x"] = next_x_vals;
