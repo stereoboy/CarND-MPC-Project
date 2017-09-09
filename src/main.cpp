@@ -70,8 +70,10 @@ int main() {
 
   // MPC is initialized here!
   MPC mpc;
+  double delta_prev = 0;
+  double a_prev = 0;
 
-  h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&mpc, &delta_prev, &a_prev](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -100,10 +102,12 @@ int main() {
           */
 
           // calculate new start point through simulation considering latency
-          double latency = 0.1; // 100ms
+          const double latency = 0.1; // 100ms
+          const double Lf = 2.67;
           px = px + v*cos(psi)*latency;
           py = py + v*sin(psi)*latency;
-
+          psi = psi + v*delta_prev/Lf*latency;
+          v  = v + a_prev*latency;
 
           // Transform world coordinates to vehicle coordinates
           Eigen::VectorXd xs = Eigen::VectorXd(ptsx.size());
@@ -137,6 +141,9 @@ int main() {
 
           double steer_value    = - vars[0]/0.436332;
           double throttle_value = vars[1];
+
+          delta_prev = vars[0];
+          a_prev = vars[1];
 
           //std::cout << "delta = " << vars[0] << std::endl;
           //std::cout << "a = " << vars[1] << std::endl;
